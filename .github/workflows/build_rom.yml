@@ -2,6 +2,11 @@ name: Build LineageOS 14.1 (SM-T116)
 
 on:
   workflow_dispatch:
+    inputs:
+      stock_kernel:
+        description: 'Use the stock 4.4 kernel + dt.img (matches the stock mali.ko)'
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -132,6 +137,8 @@ jobs:
           apply_patch frameworks/av     "frameworks_av.diff"       # ACodec: SPRD decoder pixel formats
 
       - name: Build ROM (goyave3g)
+        env:
+          GOYAVE3G_USE_STOCK_KERNEL: ${{ inputs.stock_kernel && 'true' || 'false' }}
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
           export PATH=$JAVA_HOME/bin:~/bin:$PATH
