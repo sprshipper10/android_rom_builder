@@ -62,16 +62,16 @@ jobs:
             git clone --depth=1 -b cm-14.1 https://github.com/LineageOS/android_external_stlport.git external/stlport
           fi
 
-          # external/chromium-webview stores webview.apk in git-lfs; without
-          # this the 'apk' is a text pointer and SignApk fails with ZipException.
-          git lfs install --skip-repo
-          (cd external/chromium-webview && git lfs pull)
-          for f in external/chromium-webview/prebuilt/*/webview.apk; do
-            if ! unzip -tq "$f" >/dev/null 2>&1; then
-              echo "::error::$f is not a valid zip (LFS not fetched?)"; ls -l "$f"; head -c 200 "$f"; exit 1
-            fi
-            ls -l "$f"
-          done
+          # webview.apk lives in git-lfs inside the separate project
+          # external/chromium-webview/prebuilt/<arch>. repo sync leaves ~130-byte
+          # text pointers there and SignApk then dies with ZipException, so
+          # fetch the real file (only arm is needed for this 32-bit device).
+          cd ~/android/lineage/external/chromium-webview/prebuilt/arm
+          git lfs install --local
+          git lfs pull
+          ls -l webview.apk
+          unzip -tq webview.apk >/dev/null || { echo "::error::webview.apk still not a valid zip"; head -c 200 webview.apk; exit 1; }
+          cd ~/android/lineage
 
       - name: Restore CCACHE
         uses: actions/cache/restore@v4
@@ -168,8 +168,7 @@ jobs:
           df -h || true
           cd ~/android/lineage 2>/dev/null || exit 0
           du -sh out 2>/dev/null || true
-          ls -l external/chromium-webview/prebuilt/*/webview.apk || true
-          for f in external/chromium-webview/prebuilt/*/webview.apk; do unzip -tq "$f" | tail -1; done || true
+          ls -l external/chromium-webview/prebuilt/arm/webview.apk || true
           d=out/target/product/goyave3g/obj/APPS/webview_intermediates
           ls -l $d || true
           for f in $d/package.apk*; do echo "== $f"; unzip -tq "$f" 2>&1 | tail -2; done || true
