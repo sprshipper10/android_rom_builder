@@ -136,6 +136,17 @@ jobs:
           apply_patch external/tinyalsa "external_tinyalsa.diff"   # pcm_set_samplerate()
           apply_patch frameworks/av     "frameworks_av.diff"       # ACodec: SPRD decoder pixel formats
 
+      - name: Strip SELinux xperm rules (stock kernel only supports policy v28)
+        if: ${{ inputs.stock_kernel }}
+        run: |
+          set -e
+          cd ~/android/lineage
+          python3 device/samsung/goyave3g/scripts/strip_xperm.py \
+            system/sepolicy vendor/cm/sepolicy device/samsung/goyave3g/sepolicy
+          if grep -rIn "allowxperm" system/sepolicy vendor/cm/sepolicy device/samsung/goyave3g/sepolicy --include=*.te; then
+            echo "::error::xperm rules still present"; exit 1
+          fi
+
       - name: Build ROM (goyave3g)
         env:
           GOYAVE3G_USE_STOCK_KERNEL: ${{ inputs.stock_kernel && 'true' || 'false' }}
